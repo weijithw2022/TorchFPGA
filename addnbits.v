@@ -37,3 +37,4 @@ module addNBits #(
 
     // Final carry out is the carry from the last bit
     assign carryOut = carry[BITS-1];
+endmodule
