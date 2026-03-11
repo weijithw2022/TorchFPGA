@@ -9,7 +9,6 @@ module addNBits #(
     wire [BITS:0] carry; 
 
     assign carry[0] = carryIn; 
-    assign carryOut = carry[BITS];
     genvar i; 
     generate
         for(i = 0; i < BITS; i = i + 1 ) begin : add_block
