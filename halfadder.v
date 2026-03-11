@@ -4,6 +4,6 @@ module halfAdder (
     output sum,
     output carry
 );
-    and AND (Carry, a, b);
-    xor XOR (Sum, a, b);
+    and AND (carry, a, b);
+    xor XOR (sum, a, b);
 endmodule
