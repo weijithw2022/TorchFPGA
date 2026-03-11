@@ -4,41 +4,57 @@ module partialMatrixMultiplier #(
 )(
     input [BITS*SIZE-1:0] a ,
     input [BITS*SIZE-1:0] b ,
-    output [BITS*SIZE*2 +SIZE/2-1:0] c [0:SIZE-1]
+    // output [BITS*SIZE*2 +SIZE/2-1:0] c [0:SIZE-1]
+    output [BITS*2 + SIZE - 2:0] c   // BITS*2 + SIZE - 1 bits total
+
 );
 genvar i;
-generate
+generate 
     for(i = 0; i< SIZE; i = i+1) begin: mult_block
-        wire [BITS*2-1:0] multResult;
+        wire [BITS*2-1:0] product;
         wire cout;
         multiplyNBits #(BITS*SIZE) mu(
-            .out(multResult),
-            .a(a[i*BITS +: BITS -1: i*BITS]),
-            .b(b[i*BITS +: BITS -1: i*BITS]) // Replicate b[i] BITS*SIZE times to create a vector for AND operation
+            .product(product),
+            //.a(a[i*BITS +: BITS -1: i*BITS]),
+            .a(a[i*BITS +: BITS]),
+            //.b(b[i*BITS +: BITS -1: i*BITS]) // Replicate b[i] BITS*SIZE times to create a vector for AND operation
+            .b(b[i*BITS +: BITS])
         );
+    end
+endgenerate
 
-        wire  [BITS*2 + i:0] addOut;
+genvar j;
+generate
+    for (j =0; j < SIZE - 1; j = j + 1) begin: acc_block
 
-        if (i == 0) begin
-            ADD_BITS #(BITS*2 + 1) add(
-                .sum(addOut),
+        localparam W = BITS*2 + j + 1;
+        wire [W-1:0] sum;
+        wire cout;
+
+        // wire  [BITS*2 + j:0] addOut;
+
+        if (j == 0) begin : seed
+            addNBits #(W) add(
+                .sum(sum),
                 .carryOut(cout),
-                .a(mult_block[0].multResult), 
-                .b(mult_block[1].multResult), 
+                .a({1'b0, mult_block[0].product}), 
+                // .a(mult_block[0].product), 
+                .b({mult_block[1].product, 1'b0}),
+                // .b(mult_block[1].product), 
                 .carryIn(0)
             );
         end
-        else begin
-            ADD_BITS #(BITS*2 + i + 1) add(
-                .sum(addOut),
+        else begin : accumulate
+            addNBits #(W) add(
+                .sum(sum),
                 .carryOut(cout),
-                .a(mult_block[i +1 ].multResult), 
-                .b(add_block[i-1].cout, add_block[i-1].addOut), 
+                .a({1'b0, acc_block[j -1 ].sum}), 
+                .b({{(j+1){1'b0}}, mult_block[j+1].product}), 
                 .carryIn(0)
             );
         end
         
     end
 endgenerate
-assign c = {add_block[SIZE-2].cout, add_block[SIZE-2].addOut};
+assign c = acc_block[SIZE - 2].sum;
 endmodule
